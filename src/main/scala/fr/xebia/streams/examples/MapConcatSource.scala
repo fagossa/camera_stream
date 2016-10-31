@@ -1,4 +1,4 @@
-package fr.xebia.streams
+package fr.xebia.streams.examples
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer

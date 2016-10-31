@@ -1,8 +1,8 @@
-package fr.xebia.streams
+package fr.xebia.streams.examples
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{ Sink, Source }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
