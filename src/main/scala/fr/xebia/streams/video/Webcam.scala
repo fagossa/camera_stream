@@ -3,7 +3,7 @@ package fr.xebia.streams.video
 import akka.NotUsed
 import akka.actor.{ ActorSystem, Props }
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
+import akka.http.scaladsl.model.HttpRequest
 import akka.stream.Materializer
 import akka.stream.actor.ActorPublisher
 import akka.stream.scaladsl.{ Framing, Source }
@@ -37,6 +37,7 @@ object Webcam {
   object remote {
 
     import scala.concurrent.duration._
+
     val logger = LoggerFactory.getLogger(getClass)
 
     implicit val timeout = Timeout(5.seconds)
@@ -48,14 +49,23 @@ object Webcam {
     //http://doc.akka.io/docs/akka/2.4/scala/stream/stream-cookbook.html#chunking-up-a-stream-of-bytestrings-into-limited-size-bytestrings
     def apply(host: String)(implicit system: ActorSystem, mat: Materializer): Future[Source[ByteString, Any]] = {
       implicit val ec = system.dispatcher
-      val httpRequest = HttpRequest(uri = "/html/cam_pic_new.php")
+      val httpRequest = HttpRequest(uri = s"http://$host/html/cam_pic_new.php")
 
-      Http()
+      val eventualChunks: Future[Source[ByteString, Any]] = Http()
         .singleRequest(httpRequest)
-        .map { response => logger.info(response.toString()); response }
+        .map { response => logger.warn(response.toString()); response }
         .map(_.entity.dataBytes)
-        .map(_.via(Framing.delimiter(endOfFrame, maximumFrameLength = 100, allowTruncation = true)))
-        .map(_.map(_.dropWhile(_ != beginOfFrame)))
+
+      eventualChunks
+        .map(splitIntoFrames)
+    }
+
+    def splitIntoFrames(source: Source[ByteString, Any]): Source[ByteString, Any] = {
+      source
+        .map { bytes => logger.info(bytes.toString()); bytes }
+        .via(Framing.delimiter(endOfFrame, maximumFrameLength = 500, allowTruncation = true))
+        .map(_.dropWhile(_ != beginOfFrame))
+        .map { bytes => logger.info(bytes.toString()); bytes }
     }
 
   }
