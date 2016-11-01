@@ -1,16 +1,16 @@
 package fr.xebia.streams.video
 
-import akka.actor.{ ActorLogging, DeadLetterSuppression }
+import akka.actor.{ ActorLogging, DeadLetterSuppression, Props }
 import akka.stream.actor.ActorPublisher
 import akka.stream.actor.ActorPublisherMessage.{ Cancel, Request }
-import fr.xebia.streams.video.WebcamFramePublisher.{ Continue, buildGrabber }
+import fr.xebia.streams.video.LocalCamFramePublisher.{ Continue, buildGrabber }
 import org.bytedeco.javacv.FrameGrabber.ImageMode
 import org.bytedeco.javacv.{ Frame, FrameGrabber }
 
 /**
  * Actor that backs the Akka Stream source
  */
-private[video] class WebcamFramePublisher(
+private[video] class LocalCamFramePublisher(
     deviceId: Int,
     imageWidth: Int,
     imageHeight: Int,
@@ -53,7 +53,18 @@ private[video] class WebcamFramePublisher(
   }
 }
 
-object WebcamFramePublisher {
+object LocalCamFramePublisher {
+
+  def props(deviceId: Int, width: Int, height: Int, bitsPerPixel: Int, imageMode: ImageMode): Props =
+    Props(
+      new LocalCamFramePublisher(
+        deviceId = deviceId,
+        imageWidth = width,
+        imageHeight = height,
+        bitsPerPixel = bitsPerPixel,
+        imageMode = imageMode
+      )
+    )
 
   private case object Continue extends DeadLetterSuppression
 
