@@ -17,7 +17,7 @@ object WebcamWindow extends App {
   canvas.setDefaultCloseOperation(javax.swing.JFrame.EXIT_ON_CLOSE)
 
   val imageDimensions = Dimensions(width = 640, height = 480)
-  val webcamSource = Webcam.source(deviceId = 0, dimensions = imageDimensions)
+  val webcamSource = Webcam.local(deviceId = 0, dimensions = imageDimensions)
 
   val graph = webcamSource
     .map(MediaConversion.toMat) // most OpenCV manipulations require a Matrix
