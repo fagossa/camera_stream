@@ -21,7 +21,7 @@ private[video] class LocalCamFramePublisher(
   private implicit val ec = context.dispatcher
 
   // Lazy so that nothing happens until the flow begins
-  private lazy val grabber = buildGrabber(
+  private lazy val grabber: FrameGrabber = buildGrabber(
     deviceId = deviceId,
     imageWidth = imageWidth,
     imageHeight = imageHeight,

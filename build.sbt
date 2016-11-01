@@ -8,6 +8,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream-contrib" % "0.4",
+  //"com.typesafe.akka" %% "akka-http-core" % akkaVersion,
+  "com.typesafe.akka" %% "akka-http-core" % "2.4.9",
+  "com.typesafe.akka" %% "akka-http-experimental" % "2.4.9",
   "org.typelevel" %% "cats" % "0.8.0",
   // mapping
   "com.typesafe.play" %% "play-json" % "2.5.8",
