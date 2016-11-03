@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.actor.{ ActorSystem, Props }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpRequest
-import akka.stream.Materializer
+import akka.stream._
 import akka.stream.actor.ActorPublisher
 import akka.stream.scaladsl.{ Framing, Source }
 import akka.util.{ ByteString, Timeout }
@@ -66,8 +66,59 @@ object Webcam {
         .via(Framing.delimiter(endOfFrame, maximumFrameLength = 500, allowTruncation = true))
         .map(_.dropWhile(_ != beginOfFrame))
         .map { bytes => logger.info(bytes.toString()); bytes }
+
     }
 
   }
 
+}
+
+// TODO: use this class
+import akka.stream.stage._
+
+class FrameChunker(beginOfFrame: ByteString, endOfFrame: ByteString) extends GraphStage[FlowShape[ByteString, ByteString]] {
+  val in = Inlet[ByteString]("Chunker.in")
+  val out = Outlet[ByteString]("Chunker.out")
+  override val shape = FlowShape.of(in, out)
+
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+    private var buffer = ByteString.empty
+
+    setHandler(out, new OutHandler {
+      override def onPull(): Unit = {
+        if (isClosed(in)) emitChunk()
+        else pull(in)
+      }
+    })
+    setHandler(in, new InHandler {
+      override def onPush(): Unit = {
+        val elem = grab(in)
+        buffer ++= elem
+        emitChunk()
+      }
+
+      override def onUpstreamFinish(): Unit = {
+        if (buffer.isEmpty) completeStage()
+        // elements left in buffer, keep accepting downstream pulls
+        // and push from buffer until buffer is emitted
+      }
+    })
+
+    private def emitChunk(): Unit = {
+      if (buffer.isEmpty) {
+        if (isClosed(in)) completeStage()
+        else pull(in)
+      } else {
+        val slice = buffer.indexOfSlice(endOfFrame.toList)
+        if (slice >= 0) {
+          val (chunk, nextBuffer) = buffer.splitAt(slice)
+          buffer = nextBuffer
+          push(out, chunk ++ endOfFrame)
+        } else {
+          pull(in)
+        }
+      }
+    }
+
+  }
 }
