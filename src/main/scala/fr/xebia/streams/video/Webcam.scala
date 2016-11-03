@@ -6,9 +6,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpRequest
 import akka.stream._
 import akka.stream.actor.ActorPublisher
-import akka.stream.scaladsl.{ Framing, Source }
+import akka.stream.scaladsl.Source
 import akka.util.{ ByteString, Timeout }
 import fr.xebia.streams.RemoteWebcamWindow._
+import fr.xebia.streams.transform.ByteStringUtils
+import fr.xebia.streams.transform.ByteStringUtils._
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacv.Frame
 import org.bytedeco.javacv.FrameGrabber.ImageMode
@@ -62,24 +64,22 @@ object Webcam {
 
     def splitIntoFrames(source: Source[ByteString, Any]): Source[ByteString, Any] = {
       source
+        .via(new FrameChunker(beginOfFrame, endOfFrame))
         .map { bytes => logger.info(bytes.toString()); bytes }
-        .via(Framing.delimiter(endOfFrame, maximumFrameLength = 500, allowTruncation = true))
-        .map(_.dropWhile(_ != beginOfFrame))
-        .map { bytes => logger.info(bytes.toString()); bytes }
-
     }
 
   }
 
 }
 
-// TODO: use this class
 import akka.stream.stage._
 
-class FrameChunker(beginOfFrame: ByteString, endOfFrame: ByteString) extends GraphStage[FlowShape[ByteString, ByteString]] {
+class FrameChunker(val beginOfFrame: ByteString, val endOfFrame: ByteString) extends GraphStage[FlowShape[ByteString, ByteString]] {
   val in = Inlet[ByteString]("Chunker.in")
   val out = Outlet[ByteString]("Chunker.out")
   override val shape = FlowShape.of(in, out)
+
+  val logger = LoggerFactory.getLogger(getClass)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     private var buffer = ByteString.empty
@@ -109,9 +109,20 @@ class FrameChunker(beginOfFrame: ByteString, endOfFrame: ByteString) extends Gra
         if (isClosed(in)) completeStage()
         else pull(in)
       } else {
-        val slice = buffer.indexOfSlice(endOfFrame.toList)
-        if (slice >= 0) {
-          val (chunk, nextBuffer) = buffer.splitAt(slice)
+        val slicePosition = buffer.indexOfSlice(endOfFrame.toList)
+        if (slicePosition >= 0) {
+          val (rawChunk, rawNextBuffer) = buffer.splitAt(slicePosition)
+
+          val chunk = trimChunk(rawChunk, beginOfFrame.toList)
+          val nextBuffer = trimChunk(rawNextBuffer, endOfFrame.toList)
+
+          logger.info("beginOfFrame ==== " + beginOfFrame.map(_.toString))
+          logger.info("endOfFrame ==== " + endOfFrame.map(_.toString))
+          logger.info(s"Chunk(${chunk.size}) with head ==== " + chunk.slice(0, 2).map(_.toString))
+          logger.info(s"Chunk(${chunk.size}) with tail ==== " + chunk.lastOption.toString)
+          logger.info(s"Raw next buffer(${rawNextBuffer.size}) with head ==== " + rawNextBuffer.slice(0, 2).map(_.toString))
+          logger.info(s"Next buffer(${nextBuffer.size}) with head ==== " + nextBuffer.slice(0, 2).map(_.toString))
+
           buffer = nextBuffer
           push(out, chunk ++ endOfFrame)
         } else {
