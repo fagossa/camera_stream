@@ -40,7 +40,7 @@ object RemoteWebcamWindow extends App {
       .map { bytes => logger.info(bytes.toString()); bytes }
       .map(_.toArray)
       .map { bytes =>
-        val mat = new Mat(2592, 1944, opencv_core.CV_8SC3)
+        val mat = new Mat(512, 288, opencv_core.CV_8UC3)
         mat.data().put(bytes: _*)
         mat
       }
