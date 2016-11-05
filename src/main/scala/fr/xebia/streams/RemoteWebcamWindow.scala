@@ -28,19 +28,19 @@ object RemoteWebcamWindow extends App {
   val remoteCameraSource = Webcam.remote("192.168.0.17")
 
   val graph = remoteCameraSource
-    .map(handleSource)
+    .map(toMat)
     .map(_.map(MediaConversion.toFrame))
     .map(_.map(canvas.showImage))
     .map(_.to(Sink.ignore))
 
   graph.map(_.run())
 
-  def handleSource(source: Source[ByteString, Any])(implicit ec: ExecutionContext) = {
+  def toMat(source: Source[ByteString, Any])(implicit ec: ExecutionContext): Source[Mat, Any] = {
     source
       .map { bytes => logger.info(bytes.toString()); bytes }
       .map(_.toArray)
       .map { bytes =>
-        val mat = new Mat(512, 288, opencv_core.CV_8SC3)
+        val mat = new Mat(2592, 1944, opencv_core.CV_8SC3)
         mat.data().put(bytes: _*)
         mat
       }

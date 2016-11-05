@@ -9,8 +9,8 @@ import akka.stream.actor.ActorPublisher
 import akka.stream.scaladsl.Source
 import akka.util.{ ByteString, Timeout }
 import fr.xebia.streams.RemoteWebcamWindow._
-import fr.xebia.streams.transform.ByteStringUtils
-import fr.xebia.streams.transform.ByteStringUtils._
+import fr.xebia.streams.transform.Implicits
+import fr.xebia.streams.transform.Implicits._
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacv.Frame
 import org.bytedeco.javacv.FrameGrabber.ImageMode
@@ -109,24 +109,14 @@ class FrameChunker(val beginOfFrame: ByteString, val endOfFrame: ByteString) ext
         if (isClosed(in)) completeStage()
         else pull(in)
       } else {
-        val slicePosition = buffer.indexOfSlice(endOfFrame.toList)
-        if (slicePosition >= 0) {
-          val (rawChunk, rawNextBuffer) = buffer.splitAt(slicePosition)
+        import Implicits._
+        buffer.sliceChunk(beginOfFrame, endOfFrame) match {
+          case Some((chunk, remaining)) =>
+            buffer = remaining
+            push(out, chunk)
 
-          val chunk = trimChunk(rawChunk, beginOfFrame.toList)
-          val nextBuffer = trimChunk(rawNextBuffer, endOfFrame.toList)
-
-          logger.info("beginOfFrame ==== " + beginOfFrame.map(_.toString))
-          logger.info("endOfFrame ==== " + endOfFrame.map(_.toString))
-          logger.info(s"Chunk(${chunk.size}) with head ==== " + chunk.slice(0, 2).map(_.toString))
-          logger.info(s"Chunk(${chunk.size}) with tail ==== " + chunk.lastOption.toString)
-          logger.info(s"Raw next buffer(${rawNextBuffer.size}) with head ==== " + rawNextBuffer.slice(0, 2).map(_.toString))
-          logger.info(s"Next buffer(${nextBuffer.size}) with head ==== " + nextBuffer.slice(0, 2).map(_.toString))
-
-          buffer = nextBuffer
-          push(out, chunk ++ endOfFrame)
-        } else {
-          pull(in)
+          case None =>
+            pull(in)
         }
       }
     }
