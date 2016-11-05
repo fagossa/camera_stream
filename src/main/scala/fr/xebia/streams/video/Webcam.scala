@@ -10,11 +10,9 @@ import akka.stream.scaladsl.Source
 import akka.util.{ ByteString, Timeout }
 import fr.xebia.streams.RemoteWebcamWindow._
 import fr.xebia.streams.transform.Implicits
-import fr.xebia.streams.transform.Implicits._
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacv.Frame
 import org.bytedeco.javacv.FrameGrabber.ImageMode
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 
@@ -39,35 +37,37 @@ object Webcam {
   object remote {
 
     import scala.concurrent.duration._
-
-    val logger = LoggerFactory.getLogger(getClass)
-
     implicit val timeout = Timeout(5.seconds)
 
     val beginOfFrame = ByteString(0xff, 0xd8)
 
     val endOfFrame = ByteString(0xff, 0xd9)
 
-    //http://doc.akka.io/docs/akka/2.4/scala/stream/stream-cookbook.html#chunking-up-a-stream-of-bytestrings-into-limited-size-bytestrings
     def apply(host: String)(implicit system: ActorSystem, mat: Materializer): Future[Source[ByteString, Any]] = {
       implicit val ec = system.dispatcher
       val httpRequest = HttpRequest(uri = s"http://$host/html/cam_pic_new.php")
 
       val eventualChunks: Future[Source[ByteString, Any]] = Http()
         .singleRequest(httpRequest)
-        .map { response => logger.warn(response.toString()); response }
         .map(_.entity.dataBytes)
 
       eventualChunks
         .map(splitIntoFrames)
     }
 
-    def splitIntoFrames(source: Source[ByteString, Any]): Source[ByteString, Any] = {
+    def splitIntoFrames[B](source: Source[ByteString, B]): Source[ByteString, B] =
       source
         .via(new FrameChunker(beginOfFrame, endOfFrame))
-        .map { bytes => logger.info(bytes.toString()); bytes }
-    }
+        .map(saveToDisk(s"content.data"))
 
+    def saveToDisk(filename: String)(content: ByteString): ByteString = {
+      import java.io.FileOutputStream
+      import java.io.BufferedOutputStream
+      val bos = new BufferedOutputStream(new FileOutputStream(filename))
+      bos.write(content.toArray)
+      bos.close()
+      content
+    }
   }
 
 }
@@ -78,8 +78,6 @@ class FrameChunker(val beginOfFrame: ByteString, val endOfFrame: ByteString) ext
   val in = Inlet[ByteString]("Chunker.in")
   val out = Outlet[ByteString]("Chunker.out")
   override val shape = FlowShape.of(in, out)
-
-  val logger = LoggerFactory.getLogger(getClass)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     private var buffer = ByteString.empty
