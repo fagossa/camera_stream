@@ -6,15 +6,17 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpRequest
 import akka.stream._
 import akka.stream.actor.ActorPublisher
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{ Flow, Source }
 import akka.util.{ ByteString, Timeout }
 import fr.xebia.streams.RemoteWebcamWindow._
-import fr.xebia.streams.transform.Implicits
+import fr.xebia.streams.transform.{ Implicits, MediaConversion }
+import fr.xebia.streams.video.SourceOps.toDisk
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacv.Frame
 import org.bytedeco.javacv.FrameGrabber.ImageMode
+import org.slf4j.LoggerFactory
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 object Webcam {
 
@@ -58,16 +60,8 @@ object Webcam {
     def splitIntoFrames[B](source: Source[ByteString, B]): Source[ByteString, B] =
       source
         .via(new FrameChunker(beginOfFrame, endOfFrame))
-        .map(saveToDisk(s"content.data"))
+        .via(toDisk(s"content.data"))
 
-    def saveToDisk(filename: String)(content: ByteString): ByteString = {
-      import java.io.FileOutputStream
-      import java.io.BufferedOutputStream
-      val bos = new BufferedOutputStream(new FileOutputStream(filename))
-      bos.write(content.toArray)
-      bos.close()
-      content
-    }
   }
 
 }
@@ -120,4 +114,36 @@ class FrameChunker(val beginOfFrame: ByteString, val endOfFrame: ByteString) ext
     }
 
   }
+}
+
+object SourceOps {
+  import org.bytedeco.javacpp.{ BytePointer, Pointer, opencv_core, opencv_imgcodecs }
+  import org.bytedeco.javacpp.opencv_core.{ CvMat, CvSize, Mat, cvMat }
+
+  val logger = LoggerFactory.getLogger(getClass)
+
+  def toDisk(filename: String): Flow[ByteString, ByteString, _] = {
+    Flow[ByteString]
+      .map { content =>
+        import java.io.FileOutputStream
+        import java.io.BufferedOutputStream
+        val bos = new BufferedOutputStream(new FileOutputStream(filename))
+        bos.write(content.toArray)
+        bos.close()
+        content
+      }
+  }
+
+  def toMat(implicit ec: ExecutionContext): Flow[ByteString, Mat, NotUsed] = {
+    Flow[ByteString]
+      .map(_.toArray)
+      .map { bytes =>
+        val mat = new Mat(512, 288, opencv_core.CV_8UC3)
+        mat.data().put(bytes.clone(): _*)
+        mat
+      }
+      .map { x => logger.info(x.toString); x }
+
+  }
+
 }

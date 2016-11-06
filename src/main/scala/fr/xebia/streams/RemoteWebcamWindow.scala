@@ -2,16 +2,11 @@ package fr.xebia.streams
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{ Sink, Source }
-import akka.util.ByteString
-import fr.xebia.streams.transform.MediaConversion
-import fr.xebia.streams.video.Webcam
-import org.bytedeco.javacpp.opencv_core
-import org.bytedeco.javacpp.opencv_core.Mat
+import akka.stream.scaladsl.Sink
+import fr.xebia.streams.transform.{ Flip, MediaConversion }
+import fr.xebia.streams.video.{ SourceOps, Webcam }
 import org.bytedeco.javacv.CanvasFrame
 import org.slf4j.LoggerFactory
-
-import scala.concurrent.ExecutionContext
 
 object RemoteWebcamWindow extends App {
 
@@ -28,22 +23,14 @@ object RemoteWebcamWindow extends App {
   val remoteCameraSource = Webcam.remote("192.168.0.17")
 
   val graph = remoteCameraSource
-    .map(toMat)
-    .map(_.map(MediaConversion.toFrame))
-    .map(_.map(canvas.showImage))
-    .map(_.to(Sink.ignore))
+    .map(
+      _.via(SourceOps.toMat)
+        .map(Flip.horizontal)
+        .map(MediaConversion.toFrame)
+        .map(canvas.showImage)
+        .to(Sink.ignore)
+    )
 
   graph.map(_.run())
-
-  def toMat(source: Source[ByteString, Any])(implicit ec: ExecutionContext): Source[Mat, Any] = {
-    source
-      .map { bytes => logger.info(bytes.toString()); bytes }
-      .map(_.toArray)
-      .map { bytes =>
-        val mat = new Mat(512, 288, opencv_core.CV_8UC3)
-        mat.data().put(bytes: _*)
-        mat
-      }
-  }
 
 }

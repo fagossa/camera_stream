@@ -15,6 +15,10 @@ object MediaConversion {
     def get(): OpenCVFrameConverter.ToMat = new OpenCVFrameConverter.ToMat
   })
 
+  private val bytesToMatConverter = ThreadLocal.withInitial(new Supplier[OpenCVFrameConverter.ToIplImage] {
+    def get(): OpenCVFrameConverter.ToIplImage = new OpenCVFrameConverter.ToIplImage
+  })
+
   /**
    * Returns an OpenCV Mat for a given JavaCV frame
    */
@@ -24,5 +28,10 @@ object MediaConversion {
    * Returns a JavaCV Frame for a given OpenCV Mat
    */
   def toFrame(mat: Mat): Frame = frameToMatConverter.get().convert(mat)
+
+  /**
+   * Returns a JavaCV Frame for a given OpenCV IplImage
+   */
+  def toFrame(image: IplImage): Frame = bytesToMatConverter.get().convert(image)
 
 }
