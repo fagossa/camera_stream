@@ -138,12 +138,12 @@ object SourceOps {
     Flow[ByteString]
       .map(_.toArray)
       .map { bytes =>
-        val mat = new Mat(512, 288, opencv_core.CV_8UC3)
-        mat.data().put(bytes.clone(): _*)
-        mat
+        val image = opencv_core.cvCreateImage(new CvSize(512, 288), opencv_core.CV_8UC3, 3)
+        image.imageData(new BytePointer(bytes: _*))
+        image
       }
-      .map { x => logger.info(x.toString); x }
-
+      .map(MediaConversion.toFrame)
+      .map(MediaConversion.toMat)
   }
 
 }

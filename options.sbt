@@ -7,3 +7,7 @@ scalacOptions ++= Seq(
   "-feature",
   "-language:_"
 )
+
+val buildSettings = Defaults.coreDefaultSettings ++ Seq(
+  javaOptions += "ulimit -c unlimited"
+)
