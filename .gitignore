@@ -15,6 +15,7 @@ project/plugins/project/
 .sbtserver
 .sbtserver.lock
 
+content.data
 # Scala-IDE specific
 .idea
 .scala_dependencies
