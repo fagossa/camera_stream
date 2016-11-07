@@ -4,9 +4,10 @@ import java.io.{ BufferedInputStream, ByteArrayOutputStream, FileInputStream, In
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import org.bytedeco.javacpp.opencv_core.{ CvSize, IplImage }
-import org.bytedeco.javacpp.{ BytePointer, opencv_core }
-import org.bytedeco.javacv.CanvasFrame
+import org.bytedeco.javacpp.opencv_core.{ CvSize, IplImage, Mat }
+import org.bytedeco.javacpp.{ BytePointer, opencv_core, opencv_imgcodecs }
+import org.bytedeco.javacv.OpenCVFrameConverter.ToMat
+import org.bytedeco.javacv.{ CanvasFrame, Frame }
 import org.scalatest._
 
 class ByteStringToMatSpec extends FlatSpec with MustMatchers {
@@ -38,12 +39,19 @@ class ByteStringToMatSpec extends FlatSpec with MustMatchers {
     imageData.imageData(new BytePointer(data: _*))
 
     val canvas = new CanvasFrame("Webcam")
-    //canvas.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
+
+    // Given some converters
+    import org.bytedeco.javacv._
+    val toIplImageConverter = new OpenCVFrameConverter.ToIplImage
+    val toMatConverter: ToMat = new OpenCVFrameConverter.ToMat
 
     // When the image is shown
-    import org.bytedeco.javacv.OpenCVFrameConverter
-    val converter = new OpenCVFrameConverter.ToIplImage
-    canvas.showImage(converter.convert(imageData))
+    val frame: Frame = toIplImageConverter.convert(imageData)
+
+    import org.bytedeco.javacpp.opencv_imgcodecs._
+    val decodedMat = imdecode(toMatConverter.convert(frame), opencv_imgcodecs.CV_LOAD_IMAGE_COLOR)
+
+    canvas.showImage(toMatConverter.convert(decodedMat))
 
     // Then
     imageData.width() mustBe width

@@ -14,7 +14,6 @@ import fr.xebia.streams.video.SourceOps.toDisk
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacv.Frame
 import org.bytedeco.javacv.FrameGrabber.ImageMode
-import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -119,8 +118,7 @@ class FrameChunker(val beginOfFrame: ByteString, val endOfFrame: ByteString) ext
 object SourceOps {
   import org.bytedeco.javacpp.{ BytePointer, Pointer, opencv_core, opencv_imgcodecs }
   import org.bytedeco.javacpp.opencv_core.{ CvMat, CvSize, Mat, cvMat }
-
-  val logger = LoggerFactory.getLogger(getClass)
+  import org.bytedeco.javacpp.opencv_imgcodecs._
 
   def toDisk(filename: String): Flow[ByteString, ByteString, _] = {
     Flow[ByteString]
@@ -144,6 +142,7 @@ object SourceOps {
       }
       .map(MediaConversion.toFrame)
       .map(MediaConversion.toMat)
+      .map(imdecode(_, opencv_imgcodecs.CV_LOAD_IMAGE_COLOR))
   }
 
 }
