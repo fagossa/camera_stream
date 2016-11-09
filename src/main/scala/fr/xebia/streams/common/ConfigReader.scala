@@ -1,11 +1,11 @@
 package fr.xebia.streams.common
 
+import akka.actor.ActorSystem
+
 trait ConfigReader {
-  import com.typesafe.config._
 
-  private val config: Config = ConfigFactory.defaultApplication()
-
-  def host: String = config.getString("http.host")
+  def host(implicit system: ActorSystem): String =
+    system.settings.config.getString("http.host")
 
 }
 
