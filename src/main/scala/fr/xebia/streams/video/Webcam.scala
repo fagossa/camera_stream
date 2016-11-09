@@ -11,16 +11,16 @@ import akka.stream.scaladsl.{ Flow, Source }
 import akka.util.{ ByteString, Timeout }
 import fr.xebia.streams.RemoteWebcamWindow._
 import fr.xebia.streams.common.Dimensions
-import fr.xebia.streams.transform.MediaConversion
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacv.Frame
-import org.bytedeco.javacv.FrameGrabber.ImageMode
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 object Webcam {
 
   object local {
+
+    import org.bytedeco.javacv.FrameGrabber.ImageMode
 
     def apply(
       deviceId: Int,
@@ -50,16 +50,18 @@ object Webcam {
       implicit val ec = system.dispatcher
       val httpRequest = HttpRequest(uri = provider.uri)
 
-      val eventualChunks: Future[Source[ByteString, Any]] = Http()
-        .singleRequest(httpRequest)
-        .map(_.entity.dataBytes)
+      val eventualChunks: Future[Source[ByteString, Any]] =
+        Http()
+          .singleRequest(httpRequest)
+          .map(_.entity.dataBytes)
 
+      // TODO: issue-4 comes from here!
       eventualChunks
         .map(
           _.log("reading logs", identity)
             .via(new FrameChunker(beginOfFrame, endOfFrame)).withAttributes(Attributes.logLevels(onElement = Logging.InfoLevel))
             .via(bytesToFile(s"content.data"))
-            .via(bytesToMat)
+            .via(bytesToMat(provider))
         )
     }
 
@@ -74,14 +76,16 @@ object Webcam {
         }
     }
 
-    def bytesToMat(implicit ec: ExecutionContext): Flow[ByteString, Mat, NotUsed] = {
+    def bytesToMat(provider: RemoteProvider)(implicit ec: ExecutionContext): Flow[ByteString, Mat, NotUsed] = {
+      import fr.xebia.streams.transform.MediaConversion
       import org.bytedeco.javacpp.opencv_core.CvSize
       import org.bytedeco.javacpp.opencv_imgcodecs._
       import org.bytedeco.javacpp.{ BytePointer, opencv_core, opencv_imgcodecs }
       Flow[ByteString]
         .map(_.toArray)
         .map { bytes =>
-          val image = opencv_core.cvCreateImage(new CvSize(512, 288), opencv_core.CV_8UC3, 3)
+          val frameSize = new CvSize(provider.width, provider.height)
+          val image = opencv_core.cvCreateImage(frameSize, opencv_core.CV_8UC3, 3)
           image.imageData(new BytePointer(bytes: _*))
           image
         }
