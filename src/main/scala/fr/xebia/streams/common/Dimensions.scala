@@ -1,3 +1,3 @@
-package fr.xebia.streams.video
+package fr.xebia.streams.common
 
 case class Dimensions(width: Int, height: Int)

@@ -3,8 +3,9 @@ package fr.xebia.streams
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
+import fr.xebia.streams.common.Dimensions
 import fr.xebia.streams.transform.{ Flip, MediaConversion }
-import fr.xebia.streams.video.{ Dimensions, Webcam }
+import fr.xebia.streams.video.Webcam
 import org.bytedeco.javacv.CanvasFrame
 
 object LocalWebcamWindow extends App {
