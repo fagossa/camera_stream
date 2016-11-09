@@ -28,9 +28,7 @@ By the time being, we only support the following implementations:
 
 * [RPiCamWebInterface](https://github.com/silvanmelchior/RPi_Cam_Web_Interface)
 
-You are free to implement any other implementation by extending the trait 
-
-[RemoteProvider](src/main/scala/fr/xebia/streams/video/RemoteProvider.scala)
+You are free to implement any other implementation by extending the trait [RemoteProvider](src/main/scala/fr/xebia/streams/video/RemoteProvider.scala).
 
 # How run any of the examples?
 
