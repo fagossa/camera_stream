@@ -9,7 +9,6 @@ import akka.stream._
 import akka.stream.actor.ActorPublisher
 import akka.stream.scaladsl.{ Flow, Source }
 import akka.util.{ ByteString, Timeout }
-import fr.xebia.streams.RemoteWebcamWindow._
 import fr.xebia.streams.common.Dimensions
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacv.Frame
@@ -69,9 +68,10 @@ object Webcam {
       Flow[ByteString]
         .map { content =>
           import java.io.{ BufferedOutputStream, FileOutputStream }
-          val bos = new BufferedOutputStream(new FileOutputStream(filename))
-          bos.write(content.toArray)
-          bos.close()
+          import fr.xebia.streams.common.IoOps._
+          using(new BufferedOutputStream(new FileOutputStream(filename))) { bos =>
+            bos.write(content.toArray)
+          }
           content
         }
     }
