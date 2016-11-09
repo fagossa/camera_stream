@@ -3,8 +3,9 @@ package fr.xebia.streams
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
+import fr.xebia.streams.common.ConfigReader
 import fr.xebia.streams.transform.{ Flip, MediaConversion }
-import fr.xebia.streams.video.{ SourceOps, Webcam }
+import fr.xebia.streams.video.{ RPiCamWebInterface, Webcam }
 import org.bytedeco.javacv.CanvasFrame
 import org.slf4j.LoggerFactory
 
@@ -20,12 +21,11 @@ object RemoteWebcamWindow extends App {
 
   implicit val ec = system.dispatcher
 
-  val remoteCameraSource = Webcam.remote("192.168.0.17")
+  val remoteCameraSource = Webcam.remote(RPiCamWebInterface(ConfigReader.host))
 
   val graph = remoteCameraSource
     .map(
-      _.via(SourceOps.toMat)
-        .map(Flip.horizontal)
+      _.map(Flip.horizontal)
         .map(MediaConversion.toFrame)
         .map(canvas.showImage)
         .to(Sink.ignore)
