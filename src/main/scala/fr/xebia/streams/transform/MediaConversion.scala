@@ -19,19 +19,14 @@ object MediaConversion {
     def get(): OpenCVFrameConverter.ToIplImage = new OpenCVFrameConverter.ToIplImage
   })
 
-  /**
-   * Returns an OpenCV Mat for a given JavaCV frame
-   */
-  def toMat(frame: Frame): Mat = frameToMatConverter.get().convert(frame)
+  def frameToMat(frame: Frame): Mat = frameToMatConverter.get().convert(frame)
 
-  /**
-   * Returns a JavaCV Frame for a given OpenCV Mat
-   */
-  def toFrame(mat: Mat): Frame = frameToMatConverter.get().convert(mat)
+  def matToFrame(mat: Mat): Frame = frameToMatConverter.get().convert(mat)
 
-  /**
-   * Returns a JavaCV Frame for a given OpenCV IplImage
-   */
-  def toFrame(image: IplImage): Frame = bytesToMatConverter.get().convert(image)
+  def matToIplImage(mat: Mat): IplImage = bytesToMatConverter.get().convert(matToFrame(mat))
+
+  def iplImageToFrame(image: IplImage): Frame = bytesToMatConverter.get().convert(image)
+
+  def iplImageToMat(image: IplImage): Mat = (iplImageToFrame _ andThen frameToMat)(image)
 
 }

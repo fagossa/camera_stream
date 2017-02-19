@@ -89,8 +89,8 @@ object Webcam {
           image.imageData(new BytePointer(bytes: _*))
           image
         }
-        .map(MediaConversion.toFrame)
-        .map(MediaConversion.toMat)
+        .map(MediaConversion.iplImageToFrame)
+        .map(MediaConversion.frameToMat)
         .map(imdecode(_, opencv_imgcodecs.CV_LOAD_IMAGE_COLOR))
     }
 
