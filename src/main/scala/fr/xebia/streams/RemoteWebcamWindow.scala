@@ -2,10 +2,10 @@ package fr.xebia.streams
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Sink
 import fr.xebia.streams.common.ConfigReader
-import fr.xebia.streams.transform.{ Flip, MediaConversion }
-import fr.xebia.streams.video.{ RPiCamWebInterface, Webcam }
+import fr.xebia.streams.transform.{Flip, MediaConversion}
+import fr.xebia.streams.video.ImageProcessingSinks.ShowImageSink
+import fr.xebia.streams.video.{RPiCamWebInterface, Webcam}
 import org.bytedeco.javacv.CanvasFrame
 import org.slf4j.LoggerFactory
 
@@ -27,8 +27,7 @@ object RemoteWebcamWindow extends App {
     .map(
       _.map(Flip.horizontal)
         .map(MediaConversion.matToFrame)
-        .map(canvas.showImage)
-        .to(Sink.ignore)
+        .to(ShowImageSink(canvas))
     )
 
   graph.map(_.run())

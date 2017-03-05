@@ -2,9 +2,9 @@ package fr.xebia.streams
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Sink
 import fr.xebia.streams.common.Dimensions
-import fr.xebia.streams.transform.{ Flip, MediaConversion }
+import fr.xebia.streams.transform.{Flip, MediaConversion}
+import fr.xebia.streams.video.ImageProcessingSinks.ShowImageSink
 import fr.xebia.streams.video.Webcam
 import org.bytedeco.javacv.CanvasFrame
 
@@ -24,8 +24,7 @@ object LocalWebcamWindow extends App {
     .map(MediaConversion.frameToMat) // most OpenCV manipulations require a Matrix
     .map(Flip.horizontal)
     .map(MediaConversion.matToFrame) // convert back to a frame
-    .map(canvas.showImage)
-    .to(Sink.ignore)
+    .to(ShowImageSink(canvas))
 
   graph.run()
 

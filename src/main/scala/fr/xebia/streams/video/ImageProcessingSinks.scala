@@ -11,7 +11,7 @@ object ImageProcessingSinks {
   object ShowImageSink {
 
     def apply(canvas: CanvasFrame): Sink[Frame, Future[Done]] = {
-      Sink.foreach(frame => canvas.showImage(frame))
+      Sink.foreach(canvas.showImage(_))
     }
 
   }
