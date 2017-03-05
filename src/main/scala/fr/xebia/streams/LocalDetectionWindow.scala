@@ -2,10 +2,10 @@ package fr.xebia.streams
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Sink
 import fr.xebia.streams.common.Dimensions
 import fr.xebia.streams.processing.DetectMotion
-import fr.xebia.streams.transform.{ Flip, MediaConversion }
+import fr.xebia.streams.transform.{Flip, MediaConversion}
+import fr.xebia.streams.video.ImageProcessingSinks.ShowImageSink
 import fr.xebia.streams.video.Webcam
 import org.bytedeco.javacv.CanvasFrame
 
@@ -22,13 +22,12 @@ object LocalDetectionWindow extends App {
   val localCameraSource = Webcam.local(deviceId = 0, dimensions = imageDimensions)
 
   val graph = localCameraSource
-    .map(MediaConversion.frameToMat) // most OpenCV manipulations require a Matrix
+    .map(MediaConversion.frameToMat)
     .map(Flip.horizontal)
     .grouped(2)
     .via(DetectMotion())
-    .map(MediaConversion.matToFrame) // convert back to a frame
-    .map(canvas.showImage)
-    .to(Sink.ignore)
+    .map(MediaConversion.matToFrame)
+    .to(ShowImageSink(canvas))
 
   graph.run()
 
